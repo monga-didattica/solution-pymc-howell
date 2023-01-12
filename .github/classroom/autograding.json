@@ -3,7 +3,7 @@
       {
           "name": "types",
           "setup": "python3 -m pip install -r requirements.txt",
-          "run": "mypy exercise.py",
+          "run": "FORCE_COLOR=1 mypy exercise.py",
           "timeout": 10,
           "points": null
       },
