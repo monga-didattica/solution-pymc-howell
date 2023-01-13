@@ -5,14 +5,19 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.13.8
+#       jupytext_version: 1.14.1
 #   kernelspec:
-#     display_name: Python 3
+#     display_name: Python 3 (ipykernel)
 #     language: python
 #     name: python3
 # ---
 
-# # Analysis of Howell's data with pymc3
+# + [markdown] toc=true
+# <h1>Table of Contents<span class="tocSkip"></span></h1>
+# <div class="toc"><ul class="toc-item"><li><span><a href="#Analysis-of-Howell's-data-with-pymc" data-toc-modified-id="Analysis-of-Howell's-data-with-pymc-1"><span class="toc-item-num">1&nbsp;&nbsp;</span>Analysis of Howell's data with pymc</a></span><ul class="toc-item"><li><span><a href="#A-normal-model-for-the-height" data-toc-modified-id="A-normal-model-for-the-height-1.1"><span class="toc-item-num">1.1&nbsp;&nbsp;</span>A normal model for the height</a></span><ul class="toc-item"><li><span><a href="#Exercise-1" data-toc-modified-id="Exercise-1-1.1.1"><span class="toc-item-num">1.1.1&nbsp;&nbsp;</span>Exercise 1</a></span></li><li><span><a href="#Exercise-2" data-toc-modified-id="Exercise-2-1.1.2"><span class="toc-item-num">1.1.2&nbsp;&nbsp;</span>Exercise 2</a></span></li><li><span><a href="#Exercise-3" data-toc-modified-id="Exercise-3-1.1.3"><span class="toc-item-num">1.1.3&nbsp;&nbsp;</span>Exercise 3</a></span></li><li><span><a href="#Exercise-4" data-toc-modified-id="Exercise-4-1.1.4"><span class="toc-item-num">1.1.4&nbsp;&nbsp;</span>Exercise 4</a></span></li><li><span><a href="#Exercise-5" data-toc-modified-id="Exercise-5-1.1.5"><span class="toc-item-num">1.1.5&nbsp;&nbsp;</span>Exercise 5</a></span></li><li><span><a href="#Exercise-6" data-toc-modified-id="Exercise-6-1.1.6"><span class="toc-item-num">1.1.6&nbsp;&nbsp;</span>Exercise 6</a></span></li><li><span><a href="#Exercise-7" data-toc-modified-id="Exercise-7-1.1.7"><span class="toc-item-num">1.1.7&nbsp;&nbsp;</span>Exercise 7</a></span></li></ul></li><li><span><a href="#A-linear-regression-model" data-toc-modified-id="A-linear-regression-model-1.2"><span class="toc-item-num">1.2&nbsp;&nbsp;</span>A linear regression model</a></span><ul class="toc-item"><li><span><a href="#Exercise-8" data-toc-modified-id="Exercise-8-1.2.1"><span class="toc-item-num">1.2.1&nbsp;&nbsp;</span>Exercise 8</a></span></li><li><span><a href="#Exercise-9" data-toc-modified-id="Exercise-9-1.2.2"><span class="toc-item-num">1.2.2&nbsp;&nbsp;</span>Exercise 9</a></span></li><li><span><a href="#Exercise-10" data-toc-modified-id="Exercise-10-1.2.3"><span class="toc-item-num">1.2.3&nbsp;&nbsp;</span>Exercise 10</a></span></li></ul></li></ul></li></ul></div>
+# -
+
+# # Analysis of Howell's data with pymc
 
 # +
 import numpy as np              
@@ -45,7 +50,8 @@ except:
 #
 #
 
-import pymc3 as pm   # type: ignore
+import pymc as pm   # type: ignore
+import arviz as az  # type: ignore
 
 # +
 norm_height = pm.Model()
@@ -58,20 +64,22 @@ with norm_height:
 
 # ### Exercise 1
 #
-# Plot the *a priori* densities of the three random variables of the model. You can sample random values with the method `random` of each. For example `mu.random(size=1000)` samples 1000 values from the *a priori* distribution of `sigma`. 
+# The model can be used to draw random samples. In other words, if you assume the variables `mu`, `sigma`, and `h` are distributed as stated in your statistical model, you can generate synthetic (fake) data which comply with your *a priori* (i.e., before having seen any data) hypotheses.
+#
+# Plot the *a priori* densities of the three random variables of the model. You can sample random values with the function `pm.draw`. For example `pm.draw(mu, draws=1000)` samples 1000 values from the *a priori* distribution of `mu`. 
 #
 
 fig, ax = plt.subplots(ncols=3, figsize=(15,5))
-ax[0].hist(sigma.random(size=10000), bins='auto', density=True)
+ax[0].hist(pm.draw(sigma, draws=10000), bins='auto', density=True)
 ax[0].set_title(str(sigma))
-ax[1].hist(mu.random(size=10000), bins='auto', density=True)
+ax[1].hist(pm.draw(mu, draws=10000), bins='auto', density=True)
 ax[1].set_title(str(mu))
-ax[2].hist(h.random(size=10000), bins='auto', density=True)
+ax[2].hist(pm.draw(h, draws=10000), bins='auto', density=True)
 _ = ax[2].set_title(str(h))
 
 # ### Exercise 2
 #
-# Consider only adult ($\geq 18$) males. Redefine the model above, making the height `h` an **observed** variable, using Howell's data about adult males as observations.
+# Consider only adult ($\geq 18$) males. Redefine the model above, with the same *a priori* assumptions, but making the height `h` an **observed** variable, using Howell's data about adult males as observations.
 
 adult_males = howell.query('male & age >= 18')
 
@@ -86,71 +94,62 @@ with norm_height_am:
 
 # ### Exercise 3
 #
-# Sample values from the posterior, by using `pm.sample()`. Remember to execute this within the context of the model, by using a `with` statement. 
+# Sample values from the posterior, by using `pm.sample()`. Remember to execute this within the context of the model, by using a `with` statement. By default, `pm.sample()` returns an `InferenceData` object which packages all the data about the sampling. One can summarize the *posterior* values with `az.summary`. To play further with the *posterior* distributions is useful to use `az.extract` to get an object that can be mostly used as a pandas `DataFrame` (but in fact is another type: `xarray.Dataset`).
 
 with norm_height_am:
-    posterior = pm.sample(return_inferencedata=False)
+    idata = pm.sample()
+
+az.summary(idata)
+
+post = az.extract(idata)
+
+post['mu_h'].mean()
 
 # ### Exercise 4
 #
 # Plot together the density of the posterior `mu_h` and the density of the prior `mu_h`.
 #
 
+sim_mu = pm.draw(mu, draws=1000)
+
 fig, ax = plt.subplots()
 ax.hist(posterior['mu_h'], bins='auto', density=True, label='Posterior mu_h')
-ax.hist(mu.random(size=1000), bins='auto', density=True, label='Prior mu_h', 
-        range=(posterior['mu_h'].min(),posterior['mu_h'].max()))
+ax.hist(sim_mu, bins='auto', density=True, label='Prior mu_h')
+ax.set_xlim((159, 162))
 _ = fig.legend()
 
 # ### Exercise 5
 #
 # Plot the posterior densities by using `az.plot_posterior`.
 
-# +
-import arviz as az # type: ignore
-
-
 with norm_height_am:
-    pm.plot_posterior(posterior)
-# -
+    pm.plot_posterior(idata)
+
 
 # ### Exercise 6
 #
-# Since `h` is now an observed variable, it is not possible to sample prior values directly from it. You can instead use `pm.sample_prior_predictive`. Compute the sample prior predictive mean of the height.
-
-# +
-with norm_height_am:
-    prior = pm.sample_prior_predictive(1000, var_names=['height'])
-
-prior['height'].mean()
-
-# +
-fig, ax = plt.subplots()
-ax.hist(prior['height'][:,0], bins='auto', density=True, label='Prior height (sample 0)')
-ax.hist(prior['height'][:,1], bins='auto', density=True, label='Prior height (sample 1)')
-ax.hist(prior['height'].flatten(), bins='auto', density=True, label='Prior height (all samples)')
-
-_ = fig.legend()
-
-
-# -
-
-# ### Exercise 7
-#
-# Plot together all the posterior height densities, by using all the sampled values for `mu` and `sigma` (Use the `gaussian` function below. You will get many lines! Use a gray color and a linewidth of 0.1). Add to the plot (in red) the posterior height density computed by using the mean for the posterior `mu` and `sigma`. Add to the plot (in dashed blue) the prior height density computed by using the mean for the prior `mu` and `sigma` (used the values computed by solving the previous exercise).     
+# The sampling produced 4000 different values for `mu_h` and 4000 different values for `sigma_h`.
+# Plot together all the posterior *height* densities, by using all the sampled values for `mu_h` and `sigma_h` (Use the `gaussian` function below. You will get many lines, $4000\times4000$! Use a gray color and a linewidth of 0.1 and possibly use one sample every 100 to reduce computing time). Add to the plot (in red) the posterior height density computed by using the mean for the posterior `mu` and `sigma`. Add to the plot (in dashed blue) the prior height density computed by using the mean for the prior `mu` and `sigma` (used the values computed by solving the previous exercise).     
 #
 
 def gaussian(x: np.ndarray, mu: float, sigma: float) -> np.ndarray:
     return (1/(2*np.pi*sigma**2)**.5)*np.exp(-(x - mu)**2/(2*sigma**2))
 
 
+prior_mu = pm.draw(mu, draws=10000).mean()
+prior_sigma = pm.draw(sigma, draws=10000).mean()
+
 fig, ax = plt.subplots()
 x = np.linspace(100, 200, 1000)
-for i in range(len(posterior)):
-    ax.plot(x, gaussian(x, posterior['mu_h'][i], posterior['sigma_h'][i]), color='gray', linewidth=.1)
-ax.plot(x, gaussian(x, posterior['mu_h'].mean(), posterior['sigma_h'].mean()), color='red')
-ax.plot(x, gaussian(x, mu.random(size=10000).mean(), 
-                       sigma.random(size=10000).mean().mean()), color='blue', linestyle='dashed')
+for m in range(0, 4000, 100):
+    for s in range(0, 4000, 100):
+        ax.plot(x, gaussian(x, post['mu_h'][m].to_numpy(), 
+                            post['sigma_h'][s].to_numpy()), 
+                color='gray', linewidth=.1)
+ax.plot(x, gaussian(x, post['mu_h'].to_numpy().mean(), 
+                    post['sigma_h'].to_numpy().mean()), color='red')
+ax.plot(x, gaussian(x, prior_mu, 
+                       prior_sigma), color='blue', linestyle='dashed')
 _ = ax.set_title('Posterior height')
 
 
@@ -189,11 +188,15 @@ with linear_regression:
 # Sample the model and plot the posterior densities.
 #
 
+# +
 with linear_regression:
-    post = pm.sample(return_inferencedata=False)
+    idata_regression = pm.sample()
+    
+r_post = az.extract(idata_regression)
+# -
 
 with linear_regression:
-    pm.plot_posterior(post)
+    pm.plot_posterior(idata_regression)
 
 # ### Exercise 10
 #
@@ -208,4 +211,9 @@ x = np.linspace(d_weight.min(), d_weight.max(), 100)
 
 fig, ax = plt.subplots()
 ax.scatter(d_weight, adult_males['height'])
-_ = ax.plot(x, post['alpha'].mean() + post['beta'].mean()*x, color='red')
+_ = ax.plot(x, r_post['alpha'].to_numpy().mean() + 
+            r_post['beta'].to_numpy().mean()*x, 
+            color='red')
+# -
+
+
