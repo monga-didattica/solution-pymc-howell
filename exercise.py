@@ -96,21 +96,19 @@ with norm_height_am:
 
 az.summary(idata)
 
-post = az.extract(idata)
-
-post['mu_h'].mean()
+post = az.extract(idata, combined=True).to_pandas()
 
 # ### Exercise 4
 #
 # Plot together the density of the posterior `mu_h` and the density of the prior `mu_h`.
 #
 
-sim_mu = pm.draw(mu, draws=1000)
+sim_mu = pm.draw(mu, draws=4000)
 
 fig, ax = plt.subplots()
 ax.hist(post['mu_h'], bins='auto', density=True, label='Posterior mu_h')
 ax.hist(sim_mu, bins='auto', density=True, label='Prior mu_h')
-ax.set_xlim((159, 162))
+ax.set_xlim((150, 170))
 _ = fig.legend()
 
 # ### Exercise 5
@@ -136,16 +134,19 @@ prior_sigma = pm.draw(sigma, draws=10000).mean()
 
 fig, ax = plt.subplots()
 x = np.linspace(100, 200, 1000)
-for m in range(0, 4000, 100):
-    for s in range(0, 4000, 100):
-        ax.plot(x, gaussian(x, post['mu_h'][m].to_numpy(),
-                            post['sigma_h'][s].to_numpy()),
+for m in range(0, len(post['mu_h']), 100):
+    for s in range(0, len(post['sigma_h']), 100):
+        ax.plot(x, gaussian(x, post['mu_h'].iloc[m],
+                            post['sigma_h'].iloc[s]),
                 color='gray', linewidth=.1)
-ax.plot(x, gaussian(x, post['mu_h'].to_numpy().mean(),
-                    post['sigma_h'].to_numpy().mean()), color='red')
+ax.plot(x, gaussian(x, post['mu_h'].mean(),
+                    post['sigma_h'].mean()), color='red', 
+       label='Posterior mean')
 ax.plot(x, gaussian(x, prior_mu,
-                       prior_sigma), color='blue', linestyle='dashed')
-_ = ax.set_title('Posterior height')
+                       prior_sigma), color='blue', 
+        linestyle='dashed', label='Prior')
+ax.set_title('Posterior height distribution')
+_ = ax.legend()
 
 
 # ## A linear regression model
@@ -187,7 +188,7 @@ with linear_regression:
 with linear_regression:
     idata_regression = pm.sample(chains=4, progressbar=False)
 
-r_post = az.extract(idata_regression)
+r_post = az.extract(idata_regression, combined=True).to_pandas()
 # -
 
 with linear_regression:
@@ -206,6 +207,8 @@ x = np.linspace(d_weight.min(), d_weight.max(), 100)
 
 fig, ax = plt.subplots()
 ax.scatter(d_weight, adult_males['height'])
-_ = ax.plot(x, r_post['alpha'].to_numpy().mean() +
-            r_post['beta'].to_numpy().mean()*x,
+ax.set_ylabel('height (cm)')
+ax.set_xlabel('deviations of the weights from the mean (kg)')
+_ = ax.plot(x, r_post['alpha'].mean() +
+            r_post['beta'].mean()*x,
             color='red')
