@@ -1,6 +1,6 @@
-# Analysis of Howell's data with pymc3
+# Analysis of Howell's data with pymc
 
-## Setup 
+## Setup
 
 The `exercise.py` is intended to be modified as a
 [jupyter](https://jupyter.org/) notebook. The notebook format `.ipynb`, however,
@@ -12,22 +12,16 @@ pure Python file with a notebook with the same name. The notebook is
 automatically created when you open the Python file with jupyter, and the two
 files are kept in sync. Do not add `exercise.ipynb` to the files managed by git.
 
-To start, you need the following actions (preferibly in a virtual python environment):
+To start, you need the following actions:
 
 ```sh
+python -m venv VIRTUAL_ENVIRONMENT
+# remember to activate the virtual environment according to your operating system rules
 pip install -r requirements.txt
 jupyter notebook
 ```
 
 Then you can open the `exercise.py` as a notebook in the browser.
-
-If you are using `pipenv` is even easier.
-
-
-```sh
-pipenv install
-pipenv run jupyter notebook
-```
 
 
 ## Test
